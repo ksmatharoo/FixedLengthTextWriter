@@ -1,0 +1,11 @@
+col_name,size
+account_id,10
+name,50
+mail,40
+age,3
+status,10
+desc,27
+cflow,3
+process_date,10
+debit_amt,10
+credit_amt,10

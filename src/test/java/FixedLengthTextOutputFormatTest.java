@@ -1,5 +1,5 @@
 import com.ksm.SparkUtils;
-import com.ksm.haddop.format1.FixedLengthTextOutputFormat;
+import com.ksm.hadoop.fixedLength.FixedLengthTextOutputFormat;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;

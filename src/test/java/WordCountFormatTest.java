@@ -1,5 +1,5 @@
 import com.ksm.SparkUtils;
-import com.ksm.hadoop.format.WordCountOutputFormat;
+import com.ksm.hadoop.wordCount.WordCountOutputFormat;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.spark.api.java.JavaPairRDD;

@@ -4,6 +4,7 @@ import com.ksm.spark.format.FixedLengthFileFormat;
 import com.univocity.parsers.fixed.FixedWidthFields;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.SaveMode;
 import org.apache.spark.sql.SparkSession;
 
 import java.io.IOException;
@@ -27,10 +28,14 @@ public class FixedLengthWithSparkFormatTest {
         //setting up config for FixedLengthFileFormat.class
         Gson gson = new Gson();
         String json = gson.toJson(fieldLengths);
-        sparkSession.sparkContext().hadoopConfiguration().
+        sparkSession.sparkContext().conf().
                 set("fixedLengthFile.fieldSetting", json);
 
         ds.write().format(FixedLengthFileFormat.class.getName())
+                .option("extension", "pat")
+                .option("header", "true")
+                //.option("compression", "bzip2")
+                .mode(SaveMode.Overwrite)
                 .save("src/test/resources/output/fixedLenWithSpark");
     }
 }

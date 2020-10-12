@@ -13,6 +13,8 @@ import org.apache.spark.sql.types.StructField;
 import org.apache.spark.sql.types.StructType;
 
 import java.io.OutputStream;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -24,11 +26,23 @@ public class FixedLengthOutputWriter extends OutputWriter {
     StructType dataSchema;
     TaskAttemptContext context;
     boolean bHeader;
+    long count;
 
     public FixedLengthOutputWriter(String path, StructType dataSchema, TaskAttemptContext context,
                                    String fixedWidthFields, String commaSeparatedFieldLength) {
 
         this.dataSchema = dataSchema;
+        FixedWidthWriterSettings settings = getFixedWidthWriterSettings(fixedWidthFields, commaSeparatedFieldLength);
+        this.outputStream = CodecStreams.createOutputStream(context, new Path(path));
+        writer = new FixedWidthWriter(outputStream, settings);
+        this.context = context;
+        bHeader = true;
+        count = 0;
+
+    }
+
+    private FixedWidthWriterSettings getFixedWidthWriterSettings(String fixedWidthFields,
+                                                                 String commaSeparatedFieldLength) {
         FixedWidthFields fixedWidthField;
         if (commaSeparatedFieldLength != null) {
             String[] split = commaSeparatedFieldLength.split(",");
@@ -41,24 +55,30 @@ public class FixedLengthOutputWriter extends OutputWriter {
             fixedWidthField = gson.fromJson(fixedWidthFields, FixedWidthFields.class);
         }
         FixedWidthWriterSettings settings = new FixedWidthWriterSettings(fixedWidthField);
-        this.outputStream = CodecStreams.createOutputStream(context, new Path(path));
-        writer = new FixedWidthWriter(outputStream, settings);
-        this.context = context;
-        bHeader = true;
-
+        //settings.getFormat().setComment('\0');
+        return settings;
     }
 
-    @Override
-    public void write(InternalRow internalRow) {
+    private void writeHeaderFooterIfAny() {
         if (Boolean.valueOf(context.getConfiguration().get("header", "false"))
                 && bHeader) {
             List<String> columnList = new ArrayList<>();
             Arrays.stream(this.dataSchema.fields()).forEach(field ->
                     columnList.add(field.name())
             );
+
+            DateTimeFormatter formatter = DateTimeFormatter.BASIC_ISO_DATE;
+            String formattedDate = formatter.format(LocalDate.now());
+            writer.commentRow("Business Date :" + formattedDate);
+
             writer.writeRow(columnList.toArray(new String[0]));
             bHeader = false;
         }
+    }
+
+    @Override
+    public void write(InternalRow internalRow) {
+        writeHeaderFooterIfAny();
 
         List<String> columnList = new ArrayList<>();
         StructField[] fields = dataSchema.fields();
@@ -67,10 +87,13 @@ public class FixedLengthOutputWriter extends OutputWriter {
             columnList.add(obj == null ? null : obj.toString());
         }
         writer.writeRow(columnList.toArray(new String[0]));
+        count++;
     }
 
     @Override
     public void close() {
+        String footer = String.format("Row Count:%d", count);
+        writer.commentRow(footer);
         writer.close();
     }
 }
